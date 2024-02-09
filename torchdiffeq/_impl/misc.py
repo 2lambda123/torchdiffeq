@@ -11,23 +11,50 @@ _all_adjoint_callback_names = [name + '_adjoint' for name in _all_callback_names
 _null_callback = lambda *args, **kwargs: None
 
 def _handle_unused_kwargs(solver, unused_kwargs):
+    """Warns if there are any unexpected arguments passed to the solver.
+    Parameters:
+        - solver (class): The solver class.
+        - unused_kwargs (dict): Dictionary of unused keyword arguments.
+    Returns:
+        - None: This function does not return anything.
+    Processing Logic:
+        - Warn if unused kwargs exist.
+        - Display name of solver class.
+        - Display unexpected arguments."""
+    
     if len(unused_kwargs) > 0:
         warnings.warn('{}: Unexpected arguments {}'.format(solver.__class__.__name__, unused_kwargs))
 
 
 def _linf_norm(tensor):
+    """"Calculates the L-infinity norm of a given tensor. Takes in a tensor as input and returns the maximum absolute value in the tensor as the norm.
+    Parameters:
+        - tensor (tensor): The tensor for which the L-infinity norm needs to be calculated.
+    Returns:
+        - norm (float): The maximum absolute value in the tensor, representing the L-infinity norm.
+    Processing Logic:
+        - Calculate the absolute value of each element in the tensor.
+        - Find the maximum value in the tensor.
+        - Return the maximum value as the norm.""""
+    
     return tensor.abs().max()
 
 
 def _rms_norm(tensor):
+    """"""
+    
     return tensor.abs().pow(2).mean().sqrt()
 
 
 def _zero_norm(tensor):
+    """"""
+    
     return 0.
 
 
 def _mixed_norm(tensor_tuple):
+    """"""
+    
     if len(tensor_tuple) == 0:
         return 0.
     return max(_rms_norm(tensor) for tensor in tensor_tuple)
@@ -78,6 +105,8 @@ def _select_initial_step(func, t0, y0, order, rtol, atol, norm, f0=None):
 
 
 def _compute_error_ratio(error_estimate, rtol, atol, y0, y1, norm):
+    """"""
+    
     error_tol = atol + rtol * torch.max(y0.abs(), y1.abs())
     return norm(error_estimate / error_tol).abs()
 
@@ -96,23 +125,33 @@ def _optimal_step_size(last_step, error_ratio, safety, ifactor, dfactor, order):
 
 
 def _decreasing(t):
+    """"""
+    
     return (t[1:] < t[:-1]).all()
 
 
 def _assert_one_dimensional(name, t):
+    """"""
+    
     assert t.ndimension() == 1, "{} must be one dimensional".format(name)
 
 
 def _assert_increasing(name, t):
+    """"""
+    
     assert (t[1:] > t[:-1]).all(), '{} must be strictly increasing or decreasing'.format(name)
 
 
 def _assert_floating(name, t):
+    """"""
+    
     if not torch.is_floating_point(t):
         raise TypeError('`{}` must be a floating point Tensor but is a {}'.format(name, t.type()))
 
 
 def _tuple_tol(name, tol, shapes):
+    """"""
+    
     try:
         iter(tol)
     except TypeError:
@@ -124,6 +163,8 @@ def _tuple_tol(name, tol, shapes):
 
 
 def _flat_to_shape(tensor, length, shapes):
+    """"""
+    
     tensor_list = []
     total = 0
     for shape in shapes:
@@ -136,32 +177,44 @@ def _flat_to_shape(tensor, length, shapes):
 
 class _TupleFunc(torch.nn.Module):
     def __init__(self, base_func, shapes):
+        """"""
+        
         super(_TupleFunc, self).__init__()
         self.base_func = base_func
         self.shapes = shapes
 
     def forward(self, t, y):
+        """"""
+        
         f = self.base_func(t, _flat_to_shape(y, (), self.shapes))
         return torch.cat([f_.reshape(-1) for f_ in f])
 
 
 class _TupleInputOnlyFunc(torch.nn.Module):
     def __init__(self, base_func, shapes):
+        """"""
+        
         super(_TupleInputOnlyFunc, self).__init__()
         self.base_func = base_func
         self.shapes = shapes
 
     def forward(self, t, y):
+        """"""
+        
         return self.base_func(t, _flat_to_shape(y, (), self.shapes))
 
 
 class _ReverseFunc(torch.nn.Module):
     def __init__(self, base_func, mul=1.0):
+        """"""
+        
         super(_ReverseFunc, self).__init__()
         self.base_func = base_func
         self.mul = mul
 
     def forward(self, t, y):
+        """"""
+        
         return self.mul * self.base_func(-t, y)
 
 
@@ -174,10 +227,14 @@ class Perturb(Enum):
 class _PerturbFunc(torch.nn.Module):
 
     def __init__(self, base_func):
+        """"""
+        
         super(_PerturbFunc, self).__init__()
         self.base_func = base_func
 
     def forward(self, t, y, *, perturb=Perturb.NONE):
+        """"""
+        
         assert isinstance(perturb, Perturb), "perturb argument must be of type Perturb enum"
         # This dtype change here might be buggy.
         # The exact time value should be determined inside the solver,
